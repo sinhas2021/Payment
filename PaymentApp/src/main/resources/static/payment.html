@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>Make Payment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/stylesheet2.css" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script type="text/javascript">
+
+        function loadAccountLists()
+        {
+	        $.ajax({
+	            type: "GET",
+	            contentType: "application/json; charset=utf-8",
+	            datatype: "json",
+	            url: "http://localhost:8081/secretesc/api/accounts",
+	            async: true,
+	            success: function (data, textStatus, xhr) {
+	            	$("#fromAcctDtls").append('<option value="0">Please select an account</option>');
+	            	$("#toAcctDtls").append('<option value="0">Please select an account</option>');
+	            	for(var i=0; i< data.length; i++){
+        				var accountDtls = {};
+	            		$("#fromAcctDtls").append("<option>" + data[i].accountNumber + "</option>");
+	            		$("#toAcctDtls").append("<option>" + data[i].accountNumber + "</option>");
+	            		accountDtls.accountNo = data[i].accountNumber;
+	            		accountDtls.balance = data[i]. balance;
+	            		accountDtlsList.push(accountDtls);
+	            	}
+	            },
+	            error: function (xhr, textStatus, errorThrown) {
+	               alert("Error Occurred " + errorThrown);
+	            }
+	        });
+        }
+        
+        function makePayment(paymentRequest)
+        {
+        	$("#errorDiv").html("");$("#successDiv").html("");
+        	$.ajax({
+	            type: "POST",
+	            contentType: "application/json; charset=utf-8",
+	            datatype: "json",
+	            data: JSON.stringify(paymentRequest),
+	            url: "http://localhost:8081/secretesc/api/payment",
+	            async: true,
+	            success: function (data, textStatus, xhr) {
+	            	if(data.transactionRefNo.startsWith("REF")){
+	            		$("#successDiv").html("Transaction successful. Ref no is: " + data.transactionRefNo);
+		            	$("#successDiv").show();$("#submit").hide();$("#cancel").html("Home");$("#accountSubDiv").hide();
+	            	}
+	            	else{
+	            		$("#errorDiv").html("");
+	            		$("#errorDiv").html("Transaction Failure!");
+	            		$("#errorDiv").show();
+	            	}
+	            },
+	            error: function (xhr, textStatus, errorThrown) {
+	            	$("#errorDiv").html("");$("#errorDiv").html("Transaction Failure!");$("#errorDiv").show();
+	            }
+        	});
+        }
+        
+        $(document).ready(function () {
+        	loadAccountLists();
+        
+      	$("#submit").on('click',function () {
+              var MandatoryFieldsList = ["#fromAcctDtls", "#toAcctDtls", "#amount"];
+              if ($("#errorDiv").has(".errorClass")) {
+                  $("div").filter(":contains('errorClass')").remove(); $(".errorClass").remove();$("#errorDiv").html("");
+              }
+              $("#errorDiv").append("<ol class='errorClass'>");
+              jQuery.each(MandatoryFieldsList, function (i, fieldId) {
+                  if ($(fieldId).val() == "" || $(fieldId).val() == "0" || $(fieldId).val() == "0.0") {
+                      var text = $(fieldId).prev().text();
+                      $("#errorDiv").append("<li class='errorClass'>" + text.trim() + " is a Mandatory field </li>");
+                  }
+                  return;
+              });
+              
+              if($("#fromAcctDtls").val() == $("#toAcctDtls").val()){
+            	  $("#errorDiv").append("<li class='errorClass'> Source and Destination account cannot be same </li>");
+            	  //return;
+              }
+              
+              for(var i=0;i < accountDtlsList.length;i++){
+            	if(accountDtlsList[i].accountNo == $("#fromAcctDtls").val() && accountDtlsList[i].balance < $("#amount").val())
+            	{
+          			$("#errorDiv").append("<li class='errorClass'> Transfer Amount cannot be greater than the remaining balance </li>");
+          			break;
+            	}
+              }
+              
+              $("#errorDiv").append("</ol>");
+              console.log("Error div details " + $("#errorDiv"));
+              if ($("#errorDiv").has("li").length > 0) {
+                  $("#errorDiv").show(); window.scrollTo(0, 0);
+                  return;
+              }
+              else {
+                  $("#errorDiv").hide();
+              }
+              var paymentRequestObj = {};
+              $("#errorDiv").hide();
+              paymentRequestObj.fromAccount = $("#fromAcctDtls").val();
+              paymentRequestObj.toAccount = $("#toAcctDtls").val();
+              paymentRequestObj.amount = $("#amount").val();
+              paymentRequestObj.remarks = $("#remarks").val();
+              makePayment(paymentRequestObj);
+      	});
+     });
+      	
+      	var accountDtlsList = [];
+</script>
+</head>
+<body>
+	<input type="hidden" id="fromAcctBalance">
+	<header class="header">
+		<nav class="nav">
+			<p class="logo">
+			<h1 style="color: darkkhaki; font-size: x-large">MAKE PAYMENT</h1>
+		</nav>
+	</header>
+	
+	<div style="margin-bottom: 10px;color: orangered;" id="errorDiv" hidden="hidden">
+        <label for="errors" id="errorLabel">The form contains the following errors:<br></label>
+    </div>
+    
+    <div style="margin-bottom: 10px;color: green;" id="successDiv" hidden="hidden">
+    </div>
+    
+	<div id="accountDiv" class="tabcontent">
+		<div id="accountSubDiv">
+			<div class="fromAccSelect">
+				<label for="fromAcctDtls">From Account</label>
+	              <select id="fromAcctDtls">
+	              </select>
+			</div>
+			<br/>
+			
+			<div class="toAccSelect">
+				<label for="toAcctDtls">To Account</label>
+	              <select id="toAcctDtls">
+	              </select>
+			</div>
+			<br/>
+			
+			<label for="amount">Transfer Amount</label>
+			<input type="text" id="amount" value=0.0></input>
+			
+			<br/>
+			
+			<label for="remarks">Remarks</label>
+			<input type="text" id="remarks"></input>
+		</div>
+		<div id="btnSubmit">
+	        <button type="button" class="button" id="submit">SUBMIT</button>
+	        <button type="button" class="button" id="cancel" onclick="window.location.href='index.html'">CANCEL</button>
+        </div>
+
+	</div>
+</body>
+</html>

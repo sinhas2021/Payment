@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="ISO-8859-1">
+<title>View Transactions</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.23/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.1.8/css/fixedHeader.dataTables.min.css" />
+<link rel="stylesheet" href="css/stylesheet2.css" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.10.23/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.1.8/js/dataTables.fixedHeader.min.js"></script>
+<script type="text/javascript">
+
+        function loadAccountLists()
+        {
+	        $.ajax({
+	            type: "GET",
+	            contentType: "application/json; charset=utf-8",
+	            datatype: "json",
+	            url: "http://localhost:8081/secretesc/api/accounts",
+	            async: true,
+	            success: function (data, textStatus, xhr) {
+	            	$(".accdataTable").show();
+	            	$('.transactionDataTable').hide();
+	            	var accTable = $("#tblAccounts").DataTable({
+	                    data: data,
+	                    columns: [
+	                        { "data": "accountNumber"},
+	                        { "data": "name"},
+	                        { "data": "balance"},
+	                        { "data": "emailaddress"}
+	                    ]
+	                });
+	            	$('#tblAccounts tbody').on('click', 'tr', function (e) {
+	            		e.preventDefault();
+	            	    var accountNumber =  $(this).find('td:eq(0)').text();
+	            	    var transactionDetails = getTransactionDetails(accountNumber);
+                    });
+	            	
+	            },
+	            error: function (xhr, textStatus, errorThrown) {
+	                var exceptionString = { confirmButtonLabel: "Ok", text: "errorDetails:" + JSON.parse(xhr.responseText).error.message };
+	                var exceptionOption = { height: 120, width: 260 };
+	            }
+	        });
+        }
+        
+        function getTransactionDetails(accountNumber)
+        {
+        	$.ajax({
+	            type: "GET",
+	            contentType: "application/json; charset=utf-8",
+	            datatype: "json",
+	            url: "http://localhost:8081/secretesc/api/transactions?accountNumber="+accountNumber,
+	            async: true,
+	            success: function (data, textStatus, xhr) {
+	            	var transactionTable = "";
+	            	if ( $.fn.dataTable.isDataTable( '#tblTransactions' ) ) {
+	            		transactionTable = $('#tblTransactions').DataTable();
+	            		transactionTable.data = data;
+	            	}
+	            	else {
+	            		transactionTable = $('#tblTransactions').DataTable({
+	            	    	data: data,
+		                    columns: [
+		                        { "data": "fromAccount", "defaultContent": ""},
+		                        { "data": "toAccount", "defaultContent": ""},
+		                        { "data": "amount", "defaultContent": ""},
+		                        { "data": "remarks", "defaultContent": ""},
+		                        { "data": "status", "defaultContent": ""}
+		                    ]
+	            	    });
+	            	}
+		            $('.transactionDataTable').show();
+		            //$(".accdataTable").hide();
+	            }
+        	});
+        }
+        
+        $(document).ready(function () {
+            loadAccountLists();
+            $('.transactionDataTable').hide();
+        });
+</script>
+</head>
+<body>
+	<header class="header">
+		<nav class="nav">
+			<p class="logo">
+			<h1 style="color: darkkhaki; font-size: x-large">VIEW
+				TRANSACTIONS</h1>
+		</nav>
+	</header>
+	<div id="accountDataTablePDiv" class="tabcontent">
+		<div class="accdataTable">
+			<table id="tblAccounts" class="cell-border display nowrap alert-dismissible alert-warning:">
+			<thead>
+				<tr>
+					<th colspan="4">Account Lists</th>
+				</tr>
+				<tr>
+					<th>Account Number</th>
+					<th>Name</th>
+					<th>Balance</th>
+					<th>Email Address</th>
+				</tr>
+			</thead>
+			</table>
+		</div>
+		<br/>
+		<div class="transactionDataTablePDiv" class="tabcontent">
+			<div class="transactionDataTable">
+				<table id="tblTransactions" class="cell-border display nowrap alert-dismissible alert-warning:">
+				<thead>
+					<tr>
+						<th colspan="5">Transaction History</th>
+					</tr>
+					<tr>
+						<th>From Account</th>
+						<th>To Account</th>
+						<th>Transaction Amount</th>
+						<th>Remarks</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				</table>
+			</div>
+		</div>
+		<div id="btnCancel">
+			<button type="button" class="button" id="cancel"
+				onclick="window.location.href='index.html'">Home</button>
+		</div>
+
+	</div>
+</body>
+</html>
